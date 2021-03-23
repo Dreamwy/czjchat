@@ -75,9 +75,12 @@ Page({
   onBluetoothDeviceFound() {
     wx.onBluetoothDeviceFound((res) => {
       res.devices.forEach(device => {
-        if (!device.name && !device.localName) {
-          return
-        }
+        // if (device.deviceId != "DC:52:85:19:FF:CF") {
+        //   return
+        // }
+        // if (!device.name && !device.localName) {
+        //   return
+        // }
         const foundDevices = this.data.devices
         const idx = inArray(foundDevices, 'deviceId', device.deviceId)
         const data = {}
@@ -192,9 +195,10 @@ Page({
   },
   writeBLECharacteristicValue() {
     // 向蓝牙设备发送一个0x00的16进制数据
-    let buffer = new ArrayBuffer(1)
-    let dataView = new DataView(buffer)
+    let hex = this.str2hex('AT+051R1=\r')
+    var enDataBuf = new Uint8Array(hex);
     dataView.setUint8(0, Math.random() * 255 | 0)
+    var buffer = enDataBuf.buffer
     wx.writeBLECharacteristicValue({
       deviceId: this._deviceId,
       serviceId: this._deviceId,
@@ -206,4 +210,16 @@ Page({
     wx.closeBluetoothAdapter()
     this._discoveryStarted = false
   },
+  // 字符串转16进制
+  str2hex(str){
+    if(str === ""){
+      return "";
+    }
+    var arr = [];
+    arr.push("0x");
+    for(var i=0;i<str.length;i++){
+      arr.push(str.charCodeAt(i).toString(16));
+    }
+    return arr.join('');
+  }
 })
