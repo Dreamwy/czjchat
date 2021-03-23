@@ -1,0 +1,18 @@
+<!--pages/test/test.wxml-->
+<view class="container">
+<form bindsubmit="craeteDevice">
+  <input name="deviceid" placeholder="设备id" />
+  <input name="hotilid" placeholder="酒店id" value="2HqJvn5REKhQFGk" />
+  <input name="room" placeholder="房间号" />
+  <input name="installman" placeholder="安装人" />
+  <button type="primary" 
+  form-type="submit">添加设备</button>
+</form>
+<form bindsubmit="placeDrder">
+  <input name="deviceid" placeholder="设备id" />
+  <input name="content" placeholder="内容" />
+  <button type="primary" 
+  form-type="submit">下单</button>
+</form>
+
+</view>
