@@ -195,9 +195,9 @@ Page({
   },
   writeBLECharacteristicValue() {
     // 向蓝牙设备发送一个0x00的16进制数据
-    let hex = this.str2hex('AT+051R1=\r')
+    let hex = this.str2hex('AT+061R1=\r\n')
     var enDataBuf = new Uint8Array(hex);
-    dataView.setUint8(0, Math.random() * 255 | 0)
+    // dataView.setUint8(0, Math.random() * 255 | 0)
     var buffer = enDataBuf.buffer
     wx.writeBLECharacteristicValue({
       deviceId: this._deviceId,
