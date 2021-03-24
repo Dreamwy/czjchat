@@ -20,6 +20,16 @@ function ab2hex(buffer) {
   return hexArr.join('');
 }
 
+// 字符串转为ArrayBuffer对象，参数为字符串
+function str2ab(str) {
+  var buf = new ArrayBuffer(str.length * 2); // 每个字符占用2个字节
+  var bufView = new Uint16Array(buf);
+  for (var i = 0, strLen = str.length; i < strLen; i++) {
+    bufView[i] = str.charCodeAt(i);
+  }
+  return buf;
+}
+
 Page({
   data: {
     devices: [],
@@ -124,12 +134,15 @@ Page({
     wx.getBLEDeviceServices({
       deviceId,
       success: (res) => {
-        for (let i = 0; i < res.services.length; i++) {
-          if (res.services[i].isPrimary) {
-            this.getBLEDeviceCharacteristics(deviceId, res.services[i].uuid)
-            return
-          }
-        }
+        console.log("!!!!!",res.services)
+        // this.getBLEDeviceCharacteristics(deviceId, '0000181C-0000-1000-8000-00805F9B34FB')
+        this.getBLEDeviceCharacteristics(deviceId, 'efcdab89-6745-2301-efcd-ab8967452301')
+        // for (let i = 0; i < res.services.length; i++) {
+        //   if (res.services[i].isPrimary) {
+        //     this.getBLEDeviceCharacteristics(deviceId, res.services[i].uuid)
+        //     return
+        //   }
+        // }
       }
     })
   },
@@ -179,11 +192,13 @@ Page({
         data[`chs[${this.data.chs.length}]`] = {
           uuid: characteristic.characteristicId,
           value: ab2hex(characteristic.value)
+          // value: characteristic.value
         }
       } else {
         data[`chs[${idx}]`] = {
           uuid: characteristic.characteristicId,
           value: ab2hex(characteristic.value)
+          // value: characteristic.value
         }
       }
       // data[`chs[${this.data.chs.length}]`] = {
@@ -194,11 +209,14 @@ Page({
     })
   },
   writeBLECharacteristicValue() {
-    // 向蓝牙设备发送一个0x00的16进制数据
-    let hex = this.str2hex('AT+061R1=\r\n')
+    // let ab = this.str2hex('AT+061R1=')
+    // console.log(ab)
+    let hex = this.str2hex('AT+061R1=')
     var enDataBuf = new Uint8Array(hex);
-    // dataView.setUint8(0, Math.random() * 255 | 0)
     var buffer = enDataBuf.buffer
+    // let buffer = new ArrayBuffer(1)
+    // let dataView = new DataView(buffer)
+    // dataView.setUint8(0, Math.random() * 255 | 0)
     wx.writeBLECharacteristicValue({
       deviceId: this._deviceId,
       serviceId: this._deviceId,
@@ -216,10 +234,10 @@ Page({
       return "";
     }
     var arr = [];
-    arr.push("0x");
     for(var i=0;i<str.length;i++){
       arr.push(str.charCodeAt(i).toString(16));
     }
+    arr.push('0d0a')
     return arr.join('');
   }
 })
