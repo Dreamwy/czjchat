@@ -18,24 +18,59 @@ function ab2hex(buffer) {
     }
   )
   return hexArr.join('');
+  // return String.fromCharCode.apply(null, new Uint16Array(buffer));
 }
+
+
+//十六进制转ASCII码
+function hexCharCodeToStr(hexCharCodeStr) {
+  var trimedStr = hexCharCodeStr.trim();
+  var rawStr = trimedStr.substr(0, 2).toLowerCase() === "0x" ? trimedStr.substr(2) : trimedStr;
+  var len = rawStr.length;
+  if (len % 2 !== 0) {
+    alert("存在非法字符!");
+    return "";
+  }
+  var curCharCode;
+  var resultStr = [];
+  for (var i = 0; i < len; i = i + 2) {
+    curCharCode = parseInt(rawStr.substr(i, 2), 16);
+    resultStr.push(String.fromCharCode(curCharCode));
+  }
+  return resultStr.join("");
+}
+
 
 // 字符串转为ArrayBuffer对象，参数为字符串
-function str2ab(str) {
-  var buf = new ArrayBuffer(str.length * 2); // 每个字符占用2个字节
-  var bufView = new Uint16Array(buf);
-  for (var i = 0, strLen = str.length; i < strLen; i++) {
-    bufView[i] = str.charCodeAt(i);
-  }
-  return buf;
-}
+// function str2ab(str) {
+//   // var buf = new ArrayBuffer(str.length * 2); // 每个字符占用2个字节
+//   var buf = new ArrayBuffer(22);
+//   var bufView = new Uint16Array(buf);
+//   // for (var i = 0, strLen = str.length; i < strLen; i++) {
+//   //   bufView[i] = str.charCodeAt(i).toString(16);
+//   // }
+//   bufView[0] = 41
+//   bufView[2] = 54
+//   console.log(buf)
+//   return buf;
+// }
 
+var bleData = ''
+var bleStr = ''
 Page({
   data: {
     devices: [],
     connected: false,
     chs: [],
   },
+  onShow() {
+    console.log('onShow监听页面显示');
+  },
+
+  onHide() {
+    this.closeBLEConnection()
+  },
+
   openBluetoothAdapter() {
     wx.openBluetoothAdapter({
       success: (res) => {
@@ -134,9 +169,9 @@ Page({
     wx.getBLEDeviceServices({
       deviceId,
       success: (res) => {
-        console.log("!!!!!",res.services)
+        console.log("!!!!!", res.services)
         // this.getBLEDeviceCharacteristics(deviceId, '0000181C-0000-1000-8000-00805F9B34FB')
-        this.getBLEDeviceCharacteristics(deviceId, 'efcdab89-6745-2301-efcd-ab8967452301')
+        this.getBLEDeviceCharacteristics(deviceId, 'EFCDAB89-6745-2301-EFCD-AB8967452301')
         // for (let i = 0; i < res.services.length; i++) {
         //   if (res.services[i].isPrimary) {
         //     this.getBLEDeviceCharacteristics(deviceId, res.services[i].uuid)
@@ -168,7 +203,7 @@ Page({
             this._deviceId = deviceId
             this._serviceId = serviceId
             this._characteristicId = item.uuid
-            this.writeBLECharacteristicValue()
+            // this.writeBLECharacteristicValue()
           }
           if (item.properties.notify || item.properties.indicate) {
             wx.notifyBLECharacteristicValueChange({
@@ -176,6 +211,9 @@ Page({
               serviceId,
               characteristicId: item.uuid,
               state: true,
+              success: (res) => {
+                console.log('开启notify成功' + this._characteristicId)
+              }
             })
           }
         }
@@ -184,60 +222,87 @@ Page({
         console.error('getBLEDeviceCharacteristics', res)
       }
     })
-    // 操作之前先监听，保证第一时间获取数据
-    wx.onBLECharacteristicValueChange((characteristic) => {
-      const idx = inArray(this.data.chs, 'uuid', characteristic.characteristicId)
-      const data = {}
-      if (idx === -1) {
-        data[`chs[${this.data.chs.length}]`] = {
-          uuid: characteristic.characteristicId,
-          value: ab2hex(characteristic.value)
-          // value: characteristic.value
-        }
-      } else {
-        data[`chs[${idx}]`] = {
-          uuid: characteristic.characteristicId,
-          value: ab2hex(characteristic.value)
-          // value: characteristic.value
-        }
-      }
-      // data[`chs[${this.data.chs.length}]`] = {
-      //   uuid: characteristic.characteristicId,
-      //   value: ab2hex(characteristic.value)
-      // }
-      this.setData(data)
-    })
   },
-  writeBLECharacteristicValue() {
-    // let ab = this.str2hex('AT+061R1=')
-    // console.log(ab)
-    let hex = this.str2hex('AT+061R1=')
-    var enDataBuf = new Uint8Array(hex);
-    var buffer = enDataBuf.buffer
-    // let buffer = new ArrayBuffer(1)
-    // let dataView = new DataView(buffer)
-    // dataView.setUint8(0, Math.random() * 255 | 0)
+  writeBLECharacteristicValue(event) {
+    var command = 'AT+061R1='
+    
+    switch (parseInt(event.currentTarget.dataset.command)) {
+      case 1:
+        command = 'AT+061R1='
+        break;
+      case 2:
+        command = 'AT+061R2='
+        break;
+      case 22:
+        command = 'AT+081W2=aa'
+        break;
+      case 5:
+        command = 'AT+061R5='
+        break;
+      case 6:
+        command = 'AT+071W6=0'
+        break;
+      default:
+        break;
+    }
+
+    console.log(command)
+    var buffer = str2ab(command)
     wx.writeBLECharacteristicValue({
       deviceId: this._deviceId,
-      serviceId: this._deviceId,
+      serviceId: this._serviceId,
       characteristicId: this._characteristicId,
       value: buffer,
+      success: (res) =>{
+        console.log("!!!!!write成功")
+        wx.onBLECharacteristicValueChange((characteristic) => {
+          console.log(ab2hex(characteristic.value))
+          if (characteristic.value.byteLength > 0) {
+            this.formdBLEData(ab2hex(characteristic.value))
+          }
+        })
+        // wx.readBLECharacteristicValue({
+        //   deviceId: that._deviceId,
+        //   serviceId: that._serviceId,
+        //   characteristicId: that._characteristicId,
+        //   success: (res) => {
+        //     console.log('读取数据成功')
+        //     // 操作之前先监听，保证第一时间获取数据
+        //   }
+        // })
+      }
     })
   },
   closeBluetoothAdapter() {
     wx.closeBluetoothAdapter()
     this._discoveryStarted = false
   },
-  // 字符串转16进制
-  str2hex(str){
-    if(str === ""){
-      return "";
+  formdBLEData(data) {
+    if (data.search('41542b') != -1) {
+      bleData = data
+    } else if (data.search('aedc') != -1) {
+      bleData = bleData.concat(data)
+      this.processBLEData(bleData)
+    } else {
+      bleData = bleData.concat(data)
     }
-    var arr = [];
-    for(var i=0;i<str.length;i++){
-      arr.push(str.charCodeAt(i).toString(16));
-    }
-    arr.push('0d0a')
-    return arr.join('');
+  },
+  processBLEData(data) {
+    console.log(hexCharCodeToStr(data))
   }
 })
+
+function str2ab(str) {
+  // var data = [0x41, 0x54, 0x2b,0x30,0x36,0x31,0x52,0x31,0x3d,0x0d,0x0a];
+  var buf = new ArrayBuffer(str.length + 2);
+  var dataView = new DataView(buf);
+  var strs = str.split("");
+  var i = 0;
+  for (i; i < strs.length; i++) {
+    dataView.setUint8(i, strs[i].charCodeAt());
+  }
+  dataView.setUint8(i, 0x0d)
+  dataView.setUint8(i + 1, 0x0a)
+  console.log(buf)
+  return buf
+}
