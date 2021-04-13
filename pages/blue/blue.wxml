@@ -30,11 +30,14 @@ module.exports.len = function(arr) {
   <view>
     <text>已连接到 {{name}}</text>
     <view class="operation">
-    <button wx:if="{{canWrite}}" size="mini" data-command='1' bindtap="writeBLECharacteristicValue">mac</button>
-    <button wx:if="{{canWrite}}" size="mini" data-command='2' bindtap="writeBLECharacteristicValue">序列号</button>
-    <button wx:if="{{canWrite}}" size="mini" data-command='22' bindtap="writeBLECharacteristicValue">写序列号</button>
-    <button wx:if="{{canWrite}}" size="mini" data-command='5' bindtap="writeBLECharacteristicValue">信息</button>
-    <button wx:if="{{canWrite}}" size="mini" data-command='6' bindtap="writeBLECharacteristicValue">开机</button>
+    <button wx:if="{{canWrite}}" size="mini" data-command='1' bindtap="formWriteData">mac</button>
+    <button wx:if="{{canWrite}}" size="mini" data-command='11' bindtap="formWriteData">写mac</button>
+    <button wx:if="{{canWrite}}" size="mini" data-command='2' bindtap="formWriteData">序列号</button>
+    <button wx:if="{{canWrite}}" size="mini" data-command='22' bindtap="formWriteData">写序列号</button>
+    <button wx:if="{{canWrite}}" size="mini" data-command='5' bindtap="formWriteData">信息</button>
+    <button wx:if="{{canWrite}}" size="mini" data-command='9' bindtap="formWriteData">名称</button>
+    <button wx:if="{{canWrite}}" size="mini" data-command='99' bindtap="formWriteData">写名称</button>
+
     <button size="mini" bindtap="closeBLEConnection">断开连接</button>
     </view>
   </view>

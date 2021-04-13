@@ -57,6 +57,7 @@ function hexCharCodeToStr(hexCharCodeStr) {
 
 var bleData = ''
 var bleStr = ''
+var bleDataLength = 0
 Page({
   data: {
     devices: [],
@@ -223,55 +224,75 @@ Page({
       }
     })
   },
-  writeBLECharacteristicValue(event) {
-    var command = 'AT+061R1='
+  formWriteData(event) {
+    var command = 'AT+051R1vv'
     
     switch (parseInt(event.currentTarget.dataset.command)) {
       case 1:
-        command = 'AT+061R1='
+        command = 'AT+051R1vv'
+        break;
+      case 11:
+        command = 'AT+181W1=22223FA5BE09vv'
         break;
       case 2:
-        command = 'AT+061R2='
+        command = 'AT+051R2vv'
         break;
       case 22:
-        command = 'AT+081W2=aa'
+        command = 'AT+081W2=aavv'
         break;
       case 5:
-        command = 'AT+061R5='
+        command = 'AT+051R5vv'
         break;
       case 6:
-        command = 'AT+071W6=0'
+        command = 'AT+071W6=1vv'
+        break;
+      case 9:
+        command = 'AT+051R9vv'
+        break;
+      case 99:
+        command = 'AT+211W9=llllljjjjjooooovv'
         break;
       default:
         break;
     }
-
-    console.log(command)
-    var buffer = str2ab(command)
-    wx.writeBLECharacteristicValue({
-      deviceId: this._deviceId,
-      serviceId: this._serviceId,
-      characteristicId: this._characteristicId,
-      value: buffer,
-      success: (res) =>{
-        console.log("!!!!!write成功")
-        wx.onBLECharacteristicValueChange((characteristic) => {
-          console.log(ab2hex(characteristic.value))
-          if (characteristic.value.byteLength > 0) {
-            this.formdBLEData(ab2hex(characteristic.value))
-          }
-        })
-        // wx.readBLECharacteristicValue({
-        //   deviceId: that._deviceId,
-        //   serviceId: that._serviceId,
-        //   characteristicId: that._characteristicId,
-        //   success: (res) => {
-        //     console.log('读取数据成功')
-        //     // 操作之前先监听，保证第一时间获取数据
-        //   }
-        // })
+    console.log("写入数据",command,command.length)
+    if(command.length>20){
+      var count  = Math.ceil(command.length/20)
+      for(var i =0;i<count;i++){
+        var sendData = command.slice(20*i,20*(i+1))
+        console.log("写入分组数据",sendData)
+        this.writeBLECharacteristicValue(sendData)
       }
-    })
+    }else{
+      this.writeBLECharacteristicValue(command)
+    }
+  },
+  writeBLECharacteristicValue(sendData){
+    var buffer = str2ab(sendData)
+        wx.writeBLECharacteristicValue({
+            deviceId: this._deviceId,
+            serviceId: this._serviceId,
+            characteristicId: this._characteristicId,
+            value: buffer,
+            success: (res) =>{
+              console.log("!!!!!write成功")
+              wx.readBLECharacteristicValue({
+                deviceId: this._deviceId,
+                serviceId: this._serviceId,
+                characteristicId: this._characteristicId,
+                success: (res) => {
+                  console.log('读取数据成功')
+                  // 操作之前先监听，保证第一时间获取数据
+                  wx.onBLECharacteristicValueChange((characteristic) => {
+                    console.log("蓝牙接收数据",ab2hex(characteristic.value))
+                    if (characteristic.value.byteLength > 0) {
+                      this.formdBLEData(ab2hex(characteristic.value))
+                    }
+                  })
+                }
+              })
+            }
+        })
   },
   closeBluetoothAdapter() {
     wx.closeBluetoothAdapter()
@@ -279,30 +300,32 @@ Page({
   },
   formdBLEData(data) {
     if (data.search('41542b') != -1) {
+      bleDataLength = 0
       bleData = data
-    } else if (data.search('aedc') != -1) {
-      bleData = bleData.concat(data)
-      this.processBLEData(bleData)
+      var temp = hexCharCodeToStr(data)
+      bleDataLength = parseInt(temp.substr(3,2))
+      console.log("蓝牙数据长度：",bleDataLength)
     } else {
       bleData = bleData.concat(data)
+      if(bleData.length*2+6>=bleDataLength+10){
+        this.processBLEData(bleData)
+      }
     }
   },
   processBLEData(data) {
-    console.log(hexCharCodeToStr(data))
+    console.log("蓝牙接收组装完成数据",hexCharCodeToStr(data))
   }
 })
 
 function str2ab(str) {
   // var data = [0x41, 0x54, 0x2b,0x30,0x36,0x31,0x52,0x31,0x3d,0x0d,0x0a];
-  var buf = new ArrayBuffer(str.length + 2);
+  var buf = new ArrayBuffer(str.length);
   var dataView = new DataView(buf);
   var strs = str.split("");
   var i = 0;
   for (i; i < strs.length; i++) {
     dataView.setUint8(i, strs[i].charCodeAt());
   }
-  dataView.setUint8(i, 0x0d)
-  dataView.setUint8(i + 1, 0x0a)
   console.log(buf)
   return buf
 }
